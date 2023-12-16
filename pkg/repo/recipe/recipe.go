@@ -79,15 +79,13 @@ func (r *RepoSQL) FindByID(ctx context.Context, id int64) (*entity.Recipe, error
 		return nil, err
 	}
 
-	var recipe Recipe // repo recipe
-	row.Scan(&recipe.ID, &recipe.Name)
-
-	return &entity.Recipe{
-		ID:          recipe.ID,
-		Name:        recipe.Name,
+	recipe := &entity.Recipe{
 		Ingredients: ingredients,
-		Steps:       steps,
-	}, nil
+		Steps: steps,
+	}
+
+	row.Scan(&recipe.ID, &recipe.Name)
+	return recipe, nil
 }
 
 func (r *RepoSQL) Add(ctx context.Context, recipe *entity.Recipe) error {
@@ -117,9 +115,4 @@ func (r *RepoSQL) Add(ctx context.Context, recipe *entity.Recipe) error {
 	}
 
 	return tx.Commit()
-}
-
-type Recipe struct {
-	ID   int64  `db:"id"`
-	Name string `db:"name"`
 }
