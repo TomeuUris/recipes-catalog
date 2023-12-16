@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS recipes (
+	id   INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS recipeSteps (
+	id       INTEGER PRIMARY KEY AUTOINCREMENT,
+	recipeId INTEGER NOT NULL,
+	stepNo   INTEGER NOT NULL,
+	content  TEXT NOT NULL,
+
+	UNIQUE(recipeId, stepNo),
+	FOREIGN KEY(recipeId) REFERENCES recipes(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS recipeIngredients (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipeId      INTEGER NOT NULL,
+    ingredientId  INTEGER NOT NULL,
+
+    FOREIGN KEY(recipeId) REFERENCES recipes(id) ON DELETE CASCADE,
+    FOREIGN KEY(ingredientId) REFERENCES ingredients(id) ON DELETE CASCADE
+);
