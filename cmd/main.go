@@ -1,14 +1,16 @@
 package main
 
 import (
+	"os"
+
 	"github.com/TomeuUris/recipes-catalog/api/v1/controller"
 	_ "github.com/TomeuUris/recipes-catalog/docs"
 	"github.com/TomeuUris/recipes-catalog/pkg/repo/ingredient"
 	"github.com/TomeuUris/recipes-catalog/pkg/repo/recipe"
 	"github.com/TomeuUris/recipes-catalog/pkg/sqlite"
 	"github.com/gin-gonic/gin"
-	_ "github.com/swaggo/files"
-	_ "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Repo struct {
@@ -21,6 +23,10 @@ func main() {
 	r := gin.Default()
 	ingredientsController := controller.NewController(ingredient.NewRepo(db))
 	r = controller.SetupRouter(ingredientsController, r)
+
+	if os.Getenv("ENV") != "prod" {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	r.Run()
 }
