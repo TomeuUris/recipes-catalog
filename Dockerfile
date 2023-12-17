@@ -24,12 +24,17 @@ RUN go mod download
 # Copy the source from the current directory to the Working Directory inside the container
 COPY pkg pkg
 COPY cmd cmd
+COPY api api
+COPY internal internal
 
 # Generate Swagger documentation
 RUN swag init --parseDependency --parseInternal -g ./cmd/main.go -o ./docs
 
 # Build the Go app
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
+
+# Generate database migrations
+RUN go run cmd/migrate/migrate.go
 
 
 
@@ -51,6 +56,9 @@ COPY --from=builder --chown=appuser:appgroup --chmod=555 /app/main .
 
 # Copy the Swagger documentation from the previous stage
 COPY --from=builder --chown=appuser:appgroup --chmod=444 /app/docs ./docs
+
+# Copy database file
+COPY --from=builder --chown=appuser:appgroup --chmod=744 /app/database.sqlite ./database.sqlite
 
 # Expose port 8080 to the outside world
 EXPOSE 8080
