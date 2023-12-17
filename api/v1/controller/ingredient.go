@@ -28,7 +28,7 @@ func NewController(repo ingredient.Repo) *IngredientController {
 // @Router /ingredients/{id} [get]
 func (c *IngredientController) GetIngredientByIdHandler(ctx *gin.Context) {
 	// Get the ingredient ID from the URL parameter
-	ingredientIDStr := ctx.Param("id")
+	ingredientIDStr := ctx.Params.ByName("id")
 	ingredientID, err := strconv.Atoi(ingredientIDStr)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ingredient ID"})
@@ -36,7 +36,8 @@ func (c *IngredientController) GetIngredientByIdHandler(ctx *gin.Context) {
 	}
 
 	// Get the ingredient from the database
-	ingredients, err := c.repo.FindByID(ctx, ingredientID)
+	// dbctx := ctx.Request.Context()
+	ingredient, err := c.repo.FindByID(ctx, ingredientID)
 	if err != nil {
 		if errors.Is(err, entity.ErrNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -47,11 +48,12 @@ func (c *IngredientController) GetIngredientByIdHandler(ctx *gin.Context) {
 	}
 
 	// Return the ingredients as a response
-	ctx.JSON(http.StatusOK, ingredients)
+	ctx.JSON(http.StatusOK, ingredient)
 }
 
 // @Summary Create ingredient
 // @Description Create a new Ingredient
+// @Tags Ingredients
 // @Accept  json
 // @Produce  json
 // @Param   ingredient     body    payload.Ingredient     true        "Ingredient info"

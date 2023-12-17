@@ -32,7 +32,8 @@ type RepoSQL struct {
 }
 
 func (r *RepoSQL) FindByID(ctx context.Context, id int) (*entity.Ingredient, error) {
-	row := r.db.QueryRowContext(ctx, `SELECT * FROM ingredients WHERE id = ?`, id)
+	// Get ingredient from database
+	row := r.db.QueryRowContext(ctx, `SELECT id, name, type FROM ingredients WHERE id = ?`, id)
 	if err := row.Err(); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, entity.ErrNotFound
@@ -40,8 +41,8 @@ func (r *RepoSQL) FindByID(ctx context.Context, id int) (*entity.Ingredient, err
 		return nil, err
 	}
 
-	var ingredient *entity.Ingredient
-	row.Scan(ingredient)
+	ingredient := &entity.Ingredient{}
+	row.Scan(&ingredient.ID, &ingredient.Name, &ingredient.Type)
 
 	return ingredient, nil
 }
