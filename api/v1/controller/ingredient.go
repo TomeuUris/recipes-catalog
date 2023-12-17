@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/TomeuUris/recipes-catalog/api/v1/payload"
+	"github.com/TomeuUris/recipes-catalog/api/v1/view"
 	"github.com/TomeuUris/recipes-catalog/pkg/entity"
 	"github.com/TomeuUris/recipes-catalog/pkg/repo/ingredient"
 	"github.com/gin-gonic/gin"
@@ -15,7 +16,7 @@ type IngredientController struct {
 	repo ingredient.Repo
 }
 
-func NewController(repo ingredient.Repo) *IngredientController {
+func NewIngredientController(repo ingredient.Repo) *IngredientController {
 	return &IngredientController{repo: repo}
 }
 
@@ -24,7 +25,7 @@ func NewController(repo ingredient.Repo) *IngredientController {
 // @Tags Ingredients
 // @Produce  json
 // @Param   id     path    int     true        "Ingredient ID"
-// @Success 200 {object} entity.Ingredient
+// @Success 200 {object} view.Ingredient
 // @Router /ingredients/{id} [get]
 func (c *IngredientController) GetIngredientByIdHandler(ctx *gin.Context) {
 	// Get the ingredient ID from the URL parameter
@@ -47,8 +48,11 @@ func (c *IngredientController) GetIngredientByIdHandler(ctx *gin.Context) {
 		return
 	}
 
+	ingredientView := &view.Ingredient{}
+	ingredientView.FromEntity(ingredient)
+
 	// Return the ingredients as a response
-	ctx.JSON(http.StatusOK, ingredient)
+	ctx.JSON(http.StatusOK, ingredientView)
 }
 
 // @Summary Create ingredient
@@ -57,7 +61,7 @@ func (c *IngredientController) GetIngredientByIdHandler(ctx *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Param   ingredient     body    payload.Ingredient     true        "Ingredient info"
-// @Success 200 {object} entity.Ingredient
+// @Success 200 {object} view.Ingredient
 // @Router /ingredients [post]
 func (c *IngredientController) CreateIngredientHandler(ctx *gin.Context) {
 	// Parse the request payload
@@ -66,7 +70,7 @@ func (c *IngredientController) CreateIngredientHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ingredient := ingredientPayload.Entity()
+	ingredient := ingredientPayload.ToEntity()
 	// Logic to create the ingredient in the database
 	err := c.repo.Add(ctx, ingredient)
 	if err != nil {
@@ -74,11 +78,14 @@ func (c *IngredientController) CreateIngredientHandler(ctx *gin.Context) {
 		return
 	}
 
+	ingredientView := &view.Ingredient{}
+	ingredientView.FromEntity(ingredient)
+
 	// Return the created ingredient as a response
-	ctx.JSON(http.StatusCreated, ingredient)
+	ctx.JSON(http.StatusCreated, ingredientView)
 }
 
-func SetupRouter(controller *IngredientController, router *gin.Engine) *gin.Engine {
+func SetupIngredientsRouter(controller *IngredientController, router *gin.Engine) *gin.Engine {
 	router.GET("/ingredients/:id", controller.GetIngredientByIdHandler)
 	router.POST("/ingredients", controller.CreateIngredientHandler)
 	return router

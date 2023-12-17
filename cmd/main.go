@@ -20,10 +20,12 @@ type Repo struct {
 
 func main() {
 	db := sqlite.MustOpen("database.sqlite")
-	r := gin.Default()
-	ingredientsController := controller.NewController(ingredient.NewRepo(db))
-	r = controller.SetupRouter(ingredientsController, r)
+	ingredientsController := controller.NewIngredientController(ingredient.NewRepo(db))
+	recipesController := controller.NewRecipeController(recipe.NewRepo(db))
 
+	r := gin.Default()
+	r = controller.SetupIngredientsRouter(ingredientsController, r)
+	r = controller.SetupRecipesRouter(recipesController, r)
 	if os.Getenv("ENV") != "prod" {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}

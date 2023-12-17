@@ -14,7 +14,7 @@ func (i *Ingredient) ApplyTo(ingredient *entity.Ingredient) {
 	ingredient.Type = i.Type
 }
 
-func (i *Ingredient) Entity() *entity.Ingredient {
+func (i *Ingredient) ToEntity() *entity.Ingredient {
 	return &entity.Ingredient{
 		Name: i.Name,
 		Type: i.Type,

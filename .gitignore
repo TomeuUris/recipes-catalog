@@ -25,3 +25,4 @@ go.work
 !/docs/doc.go
 
 database.sqlite*
+examples/
