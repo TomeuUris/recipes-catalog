@@ -20,4 +20,8 @@
 # Go workspace file
 go.work
 
+# Swag generated files
+/docs/*
+!/docs/doc.go
+
 database.sqlite*
