@@ -53,28 +53,18 @@ func getExampleRecipeGorm() *recipe.Recipe {
 }
 
 func TestRepoGorm_FindByFilter(t *testing.T) {
-	// Create an in-memory SQLite database
-	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to connect to database: %v", err)
-	}
-
-	// Migrate the database schema
-	err = db.AutoMigrate(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
-	if err != nil {
-		t.Fatalf("failed to migrate database schema: %v", err)
-	}
+	tx := db.Begin()
 
 	// Create a sample recipe
 	recipeExample := getExampleRecipeGorm()
 
-	err = db.Create(recipeExample).Error
+	err = tx.Create(recipeExample).Error
 	if err != nil {
 		t.Fatalf("failed to create recipe: %v", err)
 	}
 
 	// Create a new RepoGorm instance
-	repo := recipe.NewGormRepo(db)
+	repo := recipe.NewGormRepo(tx)
 
 	// Create a sample FindFilter
 	filter := &recipe.FindFilter{
@@ -95,34 +85,22 @@ func TestRepoGorm_FindByFilter(t *testing.T) {
 		return
 	}
 
-	// Add more assertions for the returned recipes if needed
-
-	// Add more test cases for different scenarios if needed
+	tx.Rollback()
 }
 
 func TestRepoGorm_FindByID(t *testing.T) {
-	// Create an in-memory SQLite database
-	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to connect to database: %v", err)
-	}
-
-	// Migrate the database schema
-	err = db.AutoMigrate(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
-	if err != nil {
-		t.Fatalf("failed to migrate database schema: %v", err)
-	}
+	tx := db.Begin()
 
 	// Create a sample recipe
 	expectedRecipe := getExampleRecipeGorm()
 
-	err = db.Create(expectedRecipe).Error
+	err = tx.Create(expectedRecipe).Error
 	if err != nil {
 		t.Fatalf("failed to create recipe: %v", err)
 	}
 
 	// Create a new RepoGorm instance
-	repo := recipe.NewGormRepo(db)
+	repo := recipe.NewGormRepo(tx)
 
 	recipe, err := repo.FindByID(context.Background(), 1)
 	if err != nil {
@@ -136,29 +114,21 @@ func TestRepoGorm_FindByID(t *testing.T) {
 		t.Errorf("unexpected recipe id, got: %d, want: %d", recipe.ID, expectedId)
 		return
 	}
+
+	tx.Rollback()
 }
 
 func TestRepoGorm_Add(t *testing.T) {
-	// Create an in-memory SQLite database
-	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to connect to database: %v", err)
-	}
-
-	// Migrate the database schema
-	err = db.AutoMigrate(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
-	if err != nil {
-		t.Fatalf("failed to migrate database schema: %v", err)
-	}
+	tx := db.Begin()
 
 	// Create a new RepoGorm instance
-	repo := recipe.NewGormRepo(db)
+	repo := recipe.NewGormRepo(tx)
 
 	// Create a sample recipe
 	recipe := getExampleRecipeEntity()
 
 	// Call the Add method
-	err = repo.Add(context.Background(), recipe)
+	err = repo.Add(ctx, recipe)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 		return
@@ -169,4 +139,27 @@ func TestRepoGorm_Add(t *testing.T) {
 		t.Errorf("unexpected recipe id, got: %d, want not zero", recipe.ID)
 		return
 	}
+	tx.Rollback()
+}
+
+var db *gorm.DB
+var err error
+var ctx context.Context = context.Background()
+
+func TestMain(m *testing.M) {
+	// setup
+	db, err = gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	// Migrate the database schema
+	err = db.AutoMigrate(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
+	if err != nil {
+		panic("failed to migrate database schema")
+	}
+	// run tests
+	m.Run()
+	// teardown
+	db.Migrator().DropTable(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
+
 }
