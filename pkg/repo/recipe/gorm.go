@@ -93,7 +93,11 @@ func NewGormRepo(db *gorm.DB) *RepoGorm {
 	}
 }
 
-func (r *RepoGorm) FindByID(ctx context.Context, id int) (*entity.Recipe, error) {
+func RunMigrations(db *gorm.DB) error {
+	return db.AutoMigrate(&Recipe{}, &RecipeStep{})
+}
+
+func (r *RepoGorm) FindByID(ctx context.Context, id int64) (*entity.Recipe, error) {
 	recipe := &Recipe{}
 	if err := r.db.WithContext(ctx).
 		Preload("Steps", func(db *gorm.DB) *gorm.DB {

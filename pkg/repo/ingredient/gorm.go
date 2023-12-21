@@ -38,6 +38,10 @@ func NewGormRepo(db *gorm.DB) *RepoGorm {
 	}
 }
 
+func RunMigrations(db *gorm.DB) error {
+	return db.AutoMigrate(&Ingredient{})
+}
+
 func (r *RepoGorm) FindByID(ctx context.Context, id int) (*entity.Ingredient, error) {
 	ingredient := &Ingredient{}
 	if err := r.db.WithContext(ctx).First(ingredient, id).Error; err != nil {
