@@ -85,8 +85,79 @@ func (c *IngredientController) CreateIngredientHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, ingredientView)
 }
 
+// @Summary Edit ingredient
+// @Description Edits an existing Ingredient
+// @Tags Ingredients
+// @Accept  json
+// @Produce  json
+// @Param   id     path    int64               true        "Ingredient ID"
+// @Param   ingredient     body    payload.Ingredient     true        "Ingredient info"
+// @Success 200 {object} view.Ingredient
+// @Router /ingredients/{id} [patch]
+func (c *IngredientController) EditIngredientHandler(ctx *gin.Context) {
+	// Get the ingredient ID from the URL parameter
+	ingredientIDStr := ctx.Params.ByName("id")
+	ingredientID, err := strconv.ParseInt(ingredientIDStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ingredient ID"})
+		return
+	}
+	// Parse the request payload
+	var ingredientPayload payload.Ingredient
+	if err := ctx.ShouldBindJSON(&ingredientPayload); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ingredientEntity := ingredientPayload.ToEntity()
+	ingredientEntity.ID = ingredientID
+	// Logic to create the ingredient in the database
+	err = c.repo.Edit(ctx, ingredientEntity)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ingredientView := &view.Ingredient{}
+	ingredientView.FromEntity(ingredientEntity)
+
+	// Return the updated ingredient as a response
+	ctx.JSON(http.StatusOK, ingredientView)
+}
+
+// @Summary Delete ingredient
+// @Description Deletes an existing Ingredient
+// @Tags Ingredients
+// @Accept  json
+// @Produce  json
+// @Param   id     path    int64               true        "Ingredient ID"
+// @Success 204 "No Content"
+// @Router /ingredients/{id} [delete]
+func (c *IngredientController) DeleteIngredientHandler(ctx *gin.Context) {
+	// Get the ingredient ID from the URL parameter
+	ingredientIDStr := ctx.Params.ByName("id")
+	ingredientID, err := strconv.ParseInt(ingredientIDStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ingredient ID"})
+		return
+	}
+
+	ingredientEntity := &entity.Ingredient{ID: ingredientID}
+	// Logic to create the ingredient in the database
+	err = c.repo.Delete(ctx, ingredientEntity)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return the updated ingredient as a response
+	ctx.JSON(http.StatusNoContent, nil)
+}
+
 func SetupIngredientsRouter(controller *IngredientController, router *gin.Engine) *gin.Engine {
 	router.GET("/ingredients/:id", controller.GetIngredientByIdHandler)
 	router.POST("/ingredients", controller.CreateIngredientHandler)
+	router.PATCH("/ingredients/:id", controller.EditIngredientHandler)
+	router.DELETE("/ingredients/:id", controller.DeleteIngredientHandler)
 	return router
 }
