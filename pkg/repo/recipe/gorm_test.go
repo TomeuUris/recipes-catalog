@@ -12,6 +12,28 @@ import (
 	"github.com/TomeuUris/recipes-catalog/pkg/repo/recipe"
 )
 
+var db *gorm.DB
+var err error
+var ctx context.Context = context.Background()
+
+func TestMain(m *testing.M) {
+	// setup
+	db, err = gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	// Migrate the database schema
+	err = db.AutoMigrate(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
+	if err != nil {
+		panic("failed to migrate database schema")
+	}
+	// run tests
+	m.Run()
+	// teardown
+	db.Migrator().DropTable(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
+
+}
+
 func getExampleRecipeEntity() *entity.Recipe {
 	return &entity.Recipe{
 		Name:        "recipe",
@@ -139,27 +161,179 @@ func TestRepoGorm_Add(t *testing.T) {
 		t.Errorf("unexpected recipe id, got: %d, want not zero", recipe.ID)
 		return
 	}
+
 	tx.Rollback()
 }
 
-var db *gorm.DB
-var err error
-var ctx context.Context = context.Background()
+func TestRepoGorm_Edit_RemoveSteps(t *testing.T) {
+	tx := db.Begin()
 
-func TestMain(m *testing.M) {
-	// setup
-	db, err = gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
-	// Migrate the database schema
-	err = db.AutoMigrate(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
-	if err != nil {
-		panic("failed to migrate database schema")
-	}
-	// run tests
-	m.Run()
-	// teardown
-	db.Migrator().DropTable(&recipe.Recipe{}, &ingredient.Ingredient{}, &recipe.RecipeStep{})
+	// Create a sample recipe
+	recipeExample := getExampleRecipeGorm()
 
+	err = tx.Create(recipeExample).Error
+	if err != nil {
+		t.Fatalf("failed to create recipe: %v", err)
+	}
+
+	// Create a new RepoGorm instance
+	repo := recipe.NewGormRepo(tx)
+
+	// Remove one step
+	modRecipeExample := recipeExample.ToEntity()
+	modRecipeExample.Steps = modRecipeExample.Steps[:len(modRecipeExample.Steps)-1]
+
+	// Call the Edit method
+	err = repo.Edit(ctx, modRecipeExample)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	recipeFound := &recipe.Recipe{}
+	err = tx.Preload("Steps", func(db *gorm.DB) *gorm.DB {
+		return db.Order("`recipe_steps`.`order` ASC")
+	}).Preload("Ingredients").First(recipeFound, recipeExample.ID).Error
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	// Assert the number of steps is the expected one
+	if len(recipeFound.Steps) != len(modRecipeExample.Steps) {
+		t.Errorf("unexpected number of steps, got: %d, want: %d", len(recipeFound.Steps), len(modRecipeExample.Steps))
+		return
+	}
+
+	tx.Rollback()
+}
+
+func TestRepoGorm_Edit_AddSteps(t *testing.T) {
+	tx := db.Begin()
+
+	// Create a sample recipe
+	recipeExample := getExampleRecipeGorm()
+
+	err = tx.Create(recipeExample).Error
+	if err != nil {
+		t.Fatalf("failed to create recipe: %v", err)
+	}
+
+	// Create a new RepoGorm instance
+	repo := recipe.NewGormRepo(tx)
+
+	// Add one step
+	modRecipeExample := recipeExample.ToEntity()
+	modRecipeExample.Steps = append(modRecipeExample.Steps, "step3")
+
+	// Call the Edit method
+	err = repo.Edit(ctx, modRecipeExample)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	recipeFound := &recipe.Recipe{}
+	err = tx.Preload("Steps", func(db *gorm.DB) *gorm.DB {
+		return db.Order("`recipe_steps`.`order` ASC")
+	}).Preload("Ingredients").First(recipeFound, recipeExample.ID).Error
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	// Assert the number of steps is the expected one
+	if len(recipeFound.Steps) != len(modRecipeExample.Steps) {
+		t.Errorf("unexpected number of steps, got: %d, want: %d", len(recipeFound.Steps), len(recipeExample.Steps))
+		return
+	}
+
+	tx.Rollback()
+}
+
+func TestRepoGorm_Edit_ChangeValue(t *testing.T) {
+	tx := db.Begin()
+
+	// Create a sample recipe
+	recipeExample := getExampleRecipeGorm()
+
+	err = tx.Create(recipeExample).Error
+	if err != nil {
+		t.Fatalf("failed to create recipe: %v", err)
+	}
+	t.Log(recipeExample)
+	// Create a new RepoGorm instance
+	repo := recipe.NewGormRepo(tx)
+	t.Log(recipeExample)
+	modRecipe := recipeExample.ToEntity()
+	t.Log(modRecipe)
+	for _, step := range modRecipe.Steps {
+		t.Log(step)
+	}
+	modRecipe.Name = "Spaghetti Bolognese"
+	t.Log(modRecipe)
+	for _, step := range modRecipe.Steps {
+		t.Log(step)
+	}
+
+	// Call the Edit method
+	err = repo.Edit(ctx, modRecipe)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	recipeFound := &recipe.Recipe{}
+	err = tx.First(recipeFound, modRecipe.ID).Error
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	// Assert the recipe name is the expected one
+	if recipeFound.Name != modRecipe.Name {
+		t.Errorf("unexpected recipe name, got: %s, want: %s", recipeFound.Name, modRecipe.Name)
+		return
+	}
+
+	tx.Rollback()
+}
+
+func TestRepoGorm_Delete(t *testing.T) {
+	tx := db.Begin()
+
+	// Create a sample recipe
+	recipeExample := getExampleRecipeGorm()
+
+	err = tx.Create(recipeExample).Error
+	if err != nil {
+		t.Fatalf("failed to create recipe: %v", err)
+	}
+
+	// Create a new RepoGorm instance
+	repo := recipe.NewGormRepo(tx)
+
+	// Call the Delete method
+	err = repo.Delete(ctx, recipeExample.ToEntity())
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	recipeFound := &recipe.Recipe{}
+	err = tx.First(recipeFound, recipeExample.ID).Error
+	if err == nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	// Check nested steps are deleted
+	stepFound := &recipe.RecipeStep{}
+	err = tx.First(stepFound, recipeExample.Steps[0].ID).Error
+	if err == nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	tx.Rollback()
 }

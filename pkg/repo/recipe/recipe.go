@@ -11,8 +11,8 @@ type Repo interface {
 	// FindByFilter(f *FindFilter) ([]*entity.Recipe, error)
 	// CountByFilter(f *FindFilter) (int, error)
 	Add(ctx context.Context, recipe *entity.Recipe) error
-	// Edit(recipe *entity.Recipe) error
-	// Delete(recipe *entity.Recipe) error
+	Edit(ctx context.Context, recipe *entity.Recipe) error
+	Delete(ctx context.Context, recipe *entity.Recipe) error
 }
 
 // type FindFilter struct {

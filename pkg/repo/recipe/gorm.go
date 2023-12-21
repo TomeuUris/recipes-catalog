@@ -2,6 +2,7 @@ package recipe
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/TomeuUris/recipes-catalog/pkg/entity"
 	repo "github.com/TomeuUris/recipes-catalog/pkg/repo/ingredient"
@@ -74,7 +75,7 @@ func (r *Recipe) StepsFromEntity(steps []string) {
 	for i, step := range steps {
 		result[i] = &RecipeStep{
 			Content:  step,
-			Order:    i,
+			Order:    i + 1,
 			RecipeID: r.ID,
 			Recipe:   *r,
 		}
@@ -140,4 +141,58 @@ func (r *RepoGorm) Add(ctx context.Context, recipe *entity.Recipe) error {
 	}
 	recipe.FromEntity(rp.ToEntity())
 	return nil
+}
+
+func (r *RepoGorm) Edit(ctx context.Context, recipe *entity.Recipe) error {
+	rp := &Recipe{}
+	rp.FromEntity(recipe)
+
+	// Get actual steps
+	var steps []*RecipeStep
+	err := r.db.WithContext(ctx).Where("recipe_id = ?", rp.ID).Find(&steps).Error
+	if err != nil {
+		return err
+	}
+	//If there are less steps than before, delete the last ones (bulk delete). Also drop the ones deleted from the slice
+	if len(steps) > len(rp.Steps) {
+		err := r.db.WithContext(ctx).Delete(&RecipeStep{}, "recipe_id = ? AND `order` > ?", rp.ID, len(rp.Steps)).Error
+		if err != nil {
+			return err
+		}
+		steps = steps[:len(rp.Steps)]
+	}
+	// Asign id to steps that are not new
+	for i, step := range steps {
+		if i < len(steps) {
+			step.Content = rp.Steps[i].Content
+		}
+	}
+	rp.Steps = steps
+	fmt.Println("recipe")
+	fmt.Println(rp)
+	fmt.Println("recipe")
+	fmt.Println("steps")
+	for _, step := range rp.Steps {
+		fmt.Println(step)
+	}
+	fmt.Println("steps")
+	// Save Recipe
+	err = r.db.WithContext(ctx).Save(rp).Error
+	if err != nil {
+		return err
+	}
+	recipe.FromEntity(rp.ToEntity())
+	return nil
+}
+
+func (r *RepoGorm) Delete(ctx context.Context, recipe *entity.Recipe) error {
+	rp := &Recipe{}
+	rp.FromEntity(recipe)
+	// Delete steps
+	err := r.db.WithContext(ctx).Delete(&RecipeStep{}, "recipe_id = ?", rp.ID).Error
+	if err != nil {
+		return err
+	}
+	// Delete recipe
+	return r.db.WithContext(ctx).Delete(rp).Error
 }
