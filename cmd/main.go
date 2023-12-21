@@ -7,10 +7,11 @@ import (
 	_ "github.com/TomeuUris/recipes-catalog/docs"
 	"github.com/TomeuUris/recipes-catalog/pkg/repo/ingredient"
 	"github.com/TomeuUris/recipes-catalog/pkg/repo/recipe"
-	"github.com/TomeuUris/recipes-catalog/pkg/sqlite"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 type Repo struct {
@@ -19,9 +20,18 @@ type Repo struct {
 }
 
 func main() {
-	db := sqlite.MustOpen("database.sqlite")
-	ingredientsController := controller.NewIngredientController(ingredient.NewRepo(db))
-	recipesController := controller.NewRecipeController(recipe.NewRepo(db))
+	db, err := OpenDB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	// Migrate the schema
+	if err := RunMigrations(db); err != nil {
+		panic(err)
+	}
+
+	ingredientsController := controller.NewIngredientController(ingredient.NewGormRepo(db))
+	recipesController := controller.NewRecipeController(recipe.NewGormRepo(db))
 
 	r := gin.Default()
 	r = controller.SetupIngredientsRouter(ingredientsController, r)
@@ -33,56 +43,16 @@ func main() {
 	r.Run()
 }
 
-// func test() {
-// 	db := sqlite.MustOpen("database.sqlite")
-// 	ctx := context.Background()
+func OpenDB() (*gorm.DB, error) {
+	return gorm.Open(sqlite.Open("database.sqlite"), &gorm.Config{})
+}
 
-// 	repos := Repo{
-// 		Ingredients: ingredient.NewRepo(db),
-// 		Recipes:     recipe.NewRepo(db),
-// 	}
-
-// 	espaguetis := &entity.Ingredient{
-// 		Name: "spaghetti",
-// 		Type: "pasta",
-// 	}
-
-// 	tomate := &entity.Ingredient{
-// 		Name: "tomate",
-// 		Type: "salsa",
-// 	}
-
-// 	repos.Ingredients.Add(ctx, espaguetis)
-// 	fmt.Println(espaguetis.ID)
-// 	repos.Ingredients.Add(ctx, tomate)
-// 	fmt.Println(tomate.ID)
-
-// 	espaguetisConTomate := &entity.Recipe{
-// 		Name:        "spaghetti con tomate",
-// 		Ingredients: []*entity.Ingredient{espaguetis, tomate},
-// 		Steps: []string{
-// 			"Cocer la pasta",
-// 			"Preparar la salsa",
-// 			"Mezclar la pasta con la salsa",
-// 		},
-// 	}
-
-// 	repos.Recipes.Add(ctx, espaguetisConTomate)
-// 	fmt.Println("ID: ", espaguetisConTomate.ID)
-
-// 	recipe, err := repos.Recipes.FindByID(ctx, espaguetisConTomate.ID)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	fmt.Println("ID: ", recipe.ID)
-// 	fmt.Println("Name: ", recipe.Name)
-// 	fmt.Println("Ingredients: ")
-// 	for _, ingredient := range recipe.Ingredients {
-// 		fmt.Println(" - ", ingredient.Name, ingredient.Type)
-// 	}
-// 	fmt.Println("Steps: ")
-// 	for i, step := range recipe.Steps {
-// 		fmt.Println(" ", i+1, " ", step)
-// 	}
-// }
+func RunMigrations(db *gorm.DB) error {
+	if err := ingredient.RunMigrations(db); err != nil {
+		return err
+	}
+	if err := recipe.RunMigrations(db); err != nil {
+		return err
+	}
+	return nil
+}
