@@ -11,10 +11,10 @@ type Repo interface {
 	FindByFilter(ctx context.Context, f *FindFilter) ([]*entity.Ingredient, error)
 	// CountByFilter(f *FindFilter) (int, error)
 	Add(ctx context.Context, ingredient *entity.Ingredient) error
-	// Edit(recipe *entity.Recipe) error
-	// Delete(recipe *entity.Recipe) error
+	Edit(ctx context.Context, ingredient *entity.Ingredient) error
+	Delete(ctx context.Context, ingredientingredient *entity.Ingredient) error
 }
 
 type FindFilter struct {
-	RecipeId int
+	Type string
 }

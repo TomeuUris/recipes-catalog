@@ -49,7 +49,7 @@ func (r *RepoGorm) FindByID(ctx context.Context, id int) (*entity.Ingredient, er
 
 func (r *RepoGorm) FindByFilter(ctx context.Context, f *FindFilter) ([]*entity.Ingredient, error) {
 	var ingredients []*Ingredient
-	if err := r.db.WithContext(ctx).Where("recipe_id = ?", f.RecipeId).Find(&ingredients).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("type = ?", f.Type).Find(&ingredients).Error; err != nil {
 		return nil, err
 	}
 	result := make([]*entity.Ingredient, len(ingredients))
@@ -69,4 +69,16 @@ func (r *RepoGorm) Add(ctx context.Context, ingredient *entity.Ingredient) error
 	}
 	ingredient.ID = int64(i.ID)
 	return nil
+}
+
+func (r *RepoGorm) Edit(ctx context.Context, ingredient *entity.Ingredient) error {
+	i := &Ingredient{}
+	i.FromEntity(ingredient)
+	return r.db.WithContext(ctx).Save(i).Error
+}
+
+func (r *RepoGorm) Delete(ctx context.Context, ingredient *entity.Ingredient) error {
+	i := &Ingredient{}
+	i.FromEntity(ingredient)
+	return r.db.WithContext(ctx).Delete(i).Error
 }
