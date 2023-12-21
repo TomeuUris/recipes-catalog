@@ -35,7 +35,7 @@ func (r *RepoSQL) FindByID(ctx context.Context, id int) (*entity.Ingredient, err
 }
 
 func (r *RepoSQL) FindByFilter(ctx context.Context, f *FindFilter) ([]*entity.Ingredient, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT * FROM ingredients WHERE recipeId = ?`, f.RecipeId)
+	rows, err := r.db.QueryContext(ctx, `SELECT * FROM ingredients WHERE type = ?`, f.Type)
 	if err != nil {
 		return nil, err
 	}
