@@ -13,3 +13,11 @@ func (i *Ingredient) FromEntity(ingredient *entity.Ingredient) {
 	i.Name = ingredient.Name
 	i.Type = ingredient.Type
 }
+
+func (i *Ingredient) ToEntity() *entity.Ingredient {
+	return &entity.Ingredient{
+		ID:   i.ID,
+		Name: i.Name,
+		Type: i.Type,
+	}
+}
