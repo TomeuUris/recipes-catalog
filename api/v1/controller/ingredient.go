@@ -20,8 +20,67 @@ func NewIngredientController(repo ingredient.Repo) *IngredientController {
 	return &IngredientController{repo: repo}
 }
 
+// @Summary Get ingredient by filter
+// @Description Retrieves a list of ingredients filtered by the given parameters
+// @Tags Ingredients
+// @Produce  json
+// @Param   filter     query    ingredient.FindFilter     true        "Filter parameters"
+// @Success 200 {object} view.Ingredient
+// @Router /ingredients [get]
+func (c *IngredientController) GetIngredientByFilterHandler(ctx *gin.Context) {
+	// Parse the filter from the query parameters
+	var filter ingredient.FindFilter
+	if err := ctx.ShouldBindQuery(&filter); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Find the ingredients in the database
+	ingredients, err := c.repo.FindByFilter(ctx, &filter)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Convert the ingredients to a view
+	ingredientViews := make([]*view.Ingredient, len(ingredients))
+	for i, ingredient := range ingredients {
+		ingredientViews[i] = &view.Ingredient{}
+		ingredientViews[i].FromEntity(ingredient)
+	}
+
+	// Return the ingredients as a response
+	ctx.JSON(http.StatusOK, ingredientViews)
+}
+
+// @Summary Count ingredients by filter
+// @Description Retrieves the number of ingredients filtered by the given parameters
+// @Tags Ingredients
+// @Produce  json
+// @Param   filter     query    ingredient.FindFilter     true        "Filter parameters"
+// @Success 200 {object} int
+// @Router /ingredients/count [get]
+func (c *IngredientController) CountIngredientByFilterHandler(ctx *gin.Context) {
+	// Parse the filter from the query parameters
+	var filter ingredient.FindFilter
+	if err := ctx.ShouldBindQuery(&filter); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Count the ingredients in the database
+	count, err := c.repo.CountByFilter(&filter)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return the ingredients as a response
+	ctx.JSON(http.StatusOK, count)
+}
+
 // @Summary Get ingredient by ID
-// @Description get User by its ID
+// @Description Retrieves an Ingredient by its ID
 // @Tags Ingredients
 // @Produce  json
 // @Param   id     path    int     true        "Ingredient ID"
@@ -37,7 +96,6 @@ func (c *IngredientController) GetIngredientByIdHandler(ctx *gin.Context) {
 	}
 
 	// Get the ingredient from the database
-	// dbctx := ctx.Request.Context()
 	ingredient, err := c.repo.FindByID(ctx, ingredientID)
 	if err != nil {
 		if errors.Is(err, entity.ErrNotFound) {
@@ -48,10 +106,11 @@ func (c *IngredientController) GetIngredientByIdHandler(ctx *gin.Context) {
 		return
 	}
 
+	// Convert the ingredient to a view
 	ingredientView := &view.Ingredient{}
 	ingredientView.FromEntity(ingredient)
 
-	// Return the ingredients as a response
+	// Return the ingredient as a response
 	ctx.JSON(http.StatusOK, ingredientView)
 }
 
@@ -70,14 +129,18 @@ func (c *IngredientController) CreateIngredientHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Convert the payload to an entity
 	ingredient := ingredientPayload.ToEntity()
-	// Logic to create the ingredient in the database
+
+	// Create the ingredient in the database
 	err := c.repo.Add(ctx, ingredient)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Convert the ingredient to a view
 	ingredientView := &view.Ingredient{}
 	ingredientView.FromEntity(ingredient)
 
@@ -109,17 +172,30 @@ func (c *IngredientController) EditIngredientHandler(ctx *gin.Context) {
 		return
 	}
 
-	ingredientEntity := ingredientPayload.ToEntity()
-	ingredientEntity.ID = ingredientID
-	// Logic to create the ingredient in the database
-	err = c.repo.Edit(ctx, ingredientEntity)
+	// Find the ingredient in the database
+	targetIngredient, err := c.repo.FindByID(ctx, int(ingredientID))
+	if err != nil {
+		if errors.Is(err, entity.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Apply the changes to the ingredient
+	ingredientPayload.ApplyTo(targetIngredient)
+
+	// Update the ingredient in the database
+	err = c.repo.Edit(ctx, targetIngredient)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Convert the ingredient to a view
 	ingredientView := &view.Ingredient{}
-	ingredientView.FromEntity(ingredientEntity)
+	ingredientView.FromEntity(targetIngredient)
 
 	// Return the updated ingredient as a response
 	ctx.JSON(http.StatusOK, ingredientView)
@@ -155,8 +231,10 @@ func (c *IngredientController) DeleteIngredientHandler(ctx *gin.Context) {
 }
 
 func SetupIngredientsRouter(controller *IngredientController, router *gin.Engine) *gin.Engine {
-	router.GET("/ingredients/:id", controller.GetIngredientByIdHandler)
+	router.GET("/ingredients", controller.GetIngredientByFilterHandler)
 	router.POST("/ingredients", controller.CreateIngredientHandler)
+	router.GET("/ingredients/count", controller.CountIngredientByFilterHandler)
+	router.GET("/ingredients/:id", controller.GetIngredientByIdHandler)
 	router.PATCH("/ingredients/:id", controller.EditIngredientHandler)
 	router.DELETE("/ingredients/:id", controller.DeleteIngredientHandler)
 	return router
