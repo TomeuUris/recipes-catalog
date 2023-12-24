@@ -24,5 +24,8 @@ go.work
 /docs/*
 !/docs/doc.go
 
+# VS Code files
+.vscode/*
+
 database.sqlite*
 examples/
