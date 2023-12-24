@@ -7,7 +7,7 @@ import (
 
 // Recipe is the payload for the recipe entity
 type Recipe struct {
-	Name        string            `json:"name"`
+	Name        *string           `json:"name"`
 	Ingredients []view.Ingredient `json:"ingredients"`
 	Steps       []string          `json:"steps"`
 }
@@ -23,8 +23,29 @@ func (p *Recipe) ToEntity() *entity.Recipe {
 		}
 	}
 	return &entity.Recipe{
-		Name:        p.Name,
+		Name:        *p.Name,
 		Ingredients: ingredients,
 		Steps:       p.Steps,
+	}
+}
+
+// Apply the payload to the entity
+func (p *Recipe) ApplyTo(e *entity.Recipe) {
+	if p.Name != nil {
+		e.Name = *p.Name
+	}
+	if p.Steps != nil {
+		e.Steps = p.Steps
+	}
+	if p.Ingredients != nil {
+		ingredientsList := make([]*entity.Ingredient, len(p.Ingredients))
+		for i, ingredient := range p.Ingredients {
+			ingredientsList[i] = &entity.Ingredient{
+				ID:   ingredient.ID,
+				Name: ingredient.Name,
+				Type: ingredient.Type,
+			}
+		}
+		e.Ingredients = ingredientsList
 	}
 }
