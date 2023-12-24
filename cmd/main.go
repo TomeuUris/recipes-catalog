@@ -19,6 +19,13 @@ type Repo struct {
 	Recipes     recipe.Repo
 }
 
+// @title Recipes Catalog API
+// @description This is a sample server for a recipes catalog API.
+// @description It is a REST API that allows you to manage recipes and ingredients.
+// @host localhost:8080
+// @BasePath /api/v1
+// @version v1
+// @schemes http
 func main() {
 	db, err := OpenDB()
 	if err != nil {
