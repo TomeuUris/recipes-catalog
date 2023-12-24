@@ -64,11 +64,11 @@ func getExampleRecipeGorm() *recipe.Recipe {
 		Steps: []*recipe.RecipeStep{
 			{
 				Content: "step1",
-				Order:   1,
+				Order:   0,
 			},
 			{
 				Content: "step2",
-				Order:   2,
+				Order:   1,
 			},
 		},
 	}
@@ -83,6 +83,8 @@ func TestRepoGorm_FindByFilter(t *testing.T) {
 	err = tx.Create(recipeExample).Error
 	if err != nil {
 		t.Fatalf("failed to create recipe: %v", err)
+		tx.Rollback()
+		return
 	}
 
 	// Create a new RepoGorm instance
@@ -97,6 +99,7 @@ func TestRepoGorm_FindByFilter(t *testing.T) {
 	recipes, err := repo.FindByFilter(context.Background(), filter)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
@@ -104,6 +107,7 @@ func TestRepoGorm_FindByFilter(t *testing.T) {
 	expectedCount := 1 // set the expected count here
 	if len(recipes) != expectedCount {
 		t.Errorf("unexpected number of recipes, got: %d, want: %d", len(recipes), expectedCount)
+		tx.Rollback()
 		return
 	}
 
@@ -119,6 +123,7 @@ func TestRepoGorm_FindByID(t *testing.T) {
 	err = tx.Create(expectedRecipe).Error
 	if err != nil {
 		t.Fatalf("failed to create recipe: %v", err)
+		tx.Rollback()
 	}
 
 	// Create a new RepoGorm instance
@@ -127,6 +132,7 @@ func TestRepoGorm_FindByID(t *testing.T) {
 	recipe, err := repo.FindByID(context.Background(), 1)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
@@ -134,6 +140,7 @@ func TestRepoGorm_FindByID(t *testing.T) {
 	var expectedId int64 = 1 // set the expected id here
 	if recipe.ID != expectedId {
 		t.Errorf("unexpected recipe id, got: %d, want: %d", recipe.ID, expectedId)
+		tx.Rollback()
 		return
 	}
 
@@ -153,12 +160,14 @@ func TestRepoGorm_Add(t *testing.T) {
 	err = repo.Add(ctx, recipe)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
 	// Assert the recipe id is not zero
 	if recipe.ID == 0 {
 		t.Errorf("unexpected recipe id, got: %d, want not zero", recipe.ID)
+		tx.Rollback()
 		return
 	}
 
@@ -174,6 +183,8 @@ func TestRepoGorm_Edit_RemoveSteps(t *testing.T) {
 	err = tx.Create(recipeExample).Error
 	if err != nil {
 		t.Fatalf("failed to create recipe: %v", err)
+		tx.Rollback()
+		return
 	}
 
 	// Create a new RepoGorm instance
@@ -187,6 +198,7 @@ func TestRepoGorm_Edit_RemoveSteps(t *testing.T) {
 	err = repo.Edit(ctx, modRecipeExample)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
@@ -196,12 +208,14 @@ func TestRepoGorm_Edit_RemoveSteps(t *testing.T) {
 	}).Preload("Ingredients").First(recipeFound, recipeExample.ID).Error
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
 	// Assert the number of steps is the expected one
 	if len(recipeFound.Steps) != len(modRecipeExample.Steps) {
 		t.Errorf("unexpected number of steps, got: %d, want: %d", len(recipeFound.Steps), len(modRecipeExample.Steps))
+		tx.Rollback()
 		return
 	}
 
@@ -217,6 +231,8 @@ func TestRepoGorm_Edit_AddSteps(t *testing.T) {
 	err = tx.Create(recipeExample).Error
 	if err != nil {
 		t.Fatalf("failed to create recipe: %v", err)
+		tx.Rollback()
+		return
 	}
 
 	// Create a new RepoGorm instance
@@ -230,6 +246,7 @@ func TestRepoGorm_Edit_AddSteps(t *testing.T) {
 	err = repo.Edit(ctx, modRecipeExample)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
@@ -239,12 +256,14 @@ func TestRepoGorm_Edit_AddSteps(t *testing.T) {
 	}).Preload("Ingredients").First(recipeFound, recipeExample.ID).Error
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
 	// Assert the number of steps is the expected one
 	if len(recipeFound.Steps) != len(modRecipeExample.Steps) {
 		t.Errorf("unexpected number of steps, got: %d, want: %d", len(recipeFound.Steps), len(recipeExample.Steps))
+		tx.Rollback()
 		return
 	}
 
@@ -260,26 +279,21 @@ func TestRepoGorm_Edit_ChangeValue(t *testing.T) {
 	err = tx.Create(recipeExample).Error
 	if err != nil {
 		t.Fatalf("failed to create recipe: %v", err)
+		tx.Rollback()
+		return
 	}
-	t.Log(recipeExample)
+
 	// Create a new RepoGorm instance
 	repo := recipe.NewGormRepo(tx)
-	t.Log(recipeExample)
+
 	modRecipe := recipeExample.ToEntity()
-	t.Log(modRecipe)
-	for _, step := range modRecipe.Steps {
-		t.Log(step)
-	}
 	modRecipe.Name = "Spaghetti Bolognese"
-	t.Log(modRecipe)
-	for _, step := range modRecipe.Steps {
-		t.Log(step)
-	}
 
 	// Call the Edit method
 	err = repo.Edit(ctx, modRecipe)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
@@ -287,12 +301,14 @@ func TestRepoGorm_Edit_ChangeValue(t *testing.T) {
 	err = tx.First(recipeFound, modRecipe.ID).Error
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
 		return
 	}
 
 	// Assert the recipe name is the expected one
 	if recipeFound.Name != modRecipe.Name {
 		t.Errorf("unexpected recipe name, got: %s, want: %s", recipeFound.Name, modRecipe.Name)
+		tx.Rollback()
 		return
 	}
 
@@ -332,6 +348,42 @@ func TestRepoGorm_Delete(t *testing.T) {
 	err = tx.First(stepFound, recipeExample.Steps[0].ID).Error
 	if err == nil {
 		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	tx.Rollback()
+}
+
+func TestRepoGorm_CountByFilter(t *testing.T) {
+	tx := db.Begin()
+
+	// Create a sample recipe
+	recipeExample := getExampleRecipeGorm()
+
+	err = tx.Create(recipeExample).Error
+	if err != nil {
+		t.Fatalf("failed to create recipe: %v", err)
+	}
+
+	// Create a new RepoGorm instance
+	repo := recipe.NewGormRepo(tx)
+
+	// Create a sample FindFilter
+	filter := &recipe.FindFilter{
+		Id: 1,
+	}
+
+	// Call the CountByFilter method
+	count, err := repo.CountByFilter(ctx, filter)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	// Assert the expected number of recipes
+	expectedCount := 1 // set the expected count here
+	if count != expectedCount {
+		t.Errorf("unexpected number of recipes, got: %d, want: %d", count, expectedCount)
 		return
 	}
 
