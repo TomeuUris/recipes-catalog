@@ -21,7 +21,7 @@ func NewRecipeController(repo recipe.Repo) *RecipeController {
 }
 
 // @Summary Get recipes by filter
-// @Description get recipes by filter
+// @Description Retrieve recipes by filter
 // @Tags recipes
 // @Produce  json
 // @Param   filter     query    recipe.FindFilter     true        "Filter parameters"
@@ -55,7 +55,7 @@ func (c *RecipeController) GetRecipesByFilterHandler(ctx *gin.Context) {
 }
 
 // @Summary Get recipe by ID
-// @Description get User by its ID
+// @Description Retrieves a recipe by ID
 // @Tags recipes
 // @Produce  json
 // @Param   id     path    int     true        "recipe ID"
