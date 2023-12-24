@@ -189,3 +189,44 @@ func TestRepoGorm_Delete(t *testing.T) {
 	}
 	tx.Rollback()
 }
+
+
+func TestRepoGorm_CountByFilter(t *testing.T) {
+	tx := db.Begin()
+
+	// Create a sample ingredient
+	ingredientExample := getExampleIngredientGorm()
+	if err := tx.Create(ingredientExample).Error; err != nil {
+		t.Fatalf("failed to create ingredient: %v", err)
+	}
+
+	// Create the repo
+	repo := ingredient.NewGormRepo(tx)
+
+	// Find the ingredient
+	ingredientsFound, err := repo.CountByFilter(&ingredient.FindFilter{
+		Type: "Pasta",
+	})
+	if err != nil {
+		t.Fatalf("failed to find ingredient: %v", err)
+	}
+
+	// Check number of ingredients found
+	if ingredientsFound != 1 {
+		t.Fatalf("expected 1 ingredient, got %d", ingredientsFound)
+	}
+
+	// Check with a different filter
+	ingredientsFound, err = repo.CountByFilter(&ingredient.FindFilter{
+		Type: "Pizza",
+	})
+	if err != nil {
+		t.Fatalf("failed to find ingredient: %v", err)
+	}
+
+	// Check number of ingredients found
+	if ingredientsFound != 0 {
+		t.Fatalf("expected 0 ingredient, got %d", ingredientsFound)
+	}
+	tx.Rollback()
+}
