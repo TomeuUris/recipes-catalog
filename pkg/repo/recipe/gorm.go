@@ -2,13 +2,13 @@ package recipe
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/TomeuUris/recipes-catalog/pkg/entity"
 	repo "github.com/TomeuUris/recipes-catalog/pkg/repo/ingredient"
 	"gorm.io/gorm"
 )
 
+// Database model
 type RecipeStep struct {
 	gorm.Model
 	Content  string
@@ -83,10 +83,12 @@ func (r *Recipe) StepsFromEntity(steps []string) {
 	r.Steps = result
 }
 
+// Repository implementation
 type RepoGorm struct {
 	db *gorm.DB
 }
 
+// Utility functions
 func NewGormRepo(db *gorm.DB) *RepoGorm {
 	return &RepoGorm{
 		db: db,
@@ -97,6 +99,7 @@ func RunMigrations(db *gorm.DB) error {
 	return db.AutoMigrate(&Recipe{}, &RecipeStep{})
 }
 
+// CRUD functions
 func (r *RepoGorm) FindByID(ctx context.Context, id int64) (*entity.Recipe, error) {
 	recipe := &Recipe{}
 	if err := r.db.WithContext(ctx).
@@ -109,10 +112,6 @@ func (r *RepoGorm) FindByID(ctx context.Context, id int64) (*entity.Recipe, erro
 	}
 
 	return recipe.ToEntity(), nil
-}
-
-type FindFilter struct {
-	Id int
 }
 
 func (r *RepoGorm) FindByFilter(ctx context.Context, f *FindFilter) ([]*entity.Recipe, error) {
@@ -134,6 +133,14 @@ func (r *RepoGorm) FindByFilter(ctx context.Context, f *FindFilter) ([]*entity.R
 	}
 
 	return result, nil
+}
+
+func (r *RepoGorm) CountByFilter(ctx context.Context, f *FindFilter) (int, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&Recipe{}).Where(f).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 func (r *RepoGorm) Add(ctx context.Context, recipe *entity.Recipe) error {
@@ -159,7 +166,7 @@ func (r *RepoGorm) Edit(ctx context.Context, recipe *entity.Recipe) error {
 	}
 	//If there are less steps than before, delete the last ones (bulk delete). Also drop the ones deleted from the slice
 	if len(steps) > len(rp.Steps) {
-		err := r.db.WithContext(ctx).Delete(&RecipeStep{}, "recipe_id = ? AND `order` > ?", rp.ID, len(rp.Steps)).Error
+		err := r.db.WithContext(ctx).Delete(&RecipeStep{}, "recipe_id = ? AND `order` >= ?", rp.ID, len(rp.Steps)).Error
 		if err != nil {
 			return err
 		}
@@ -171,15 +178,18 @@ func (r *RepoGorm) Edit(ctx context.Context, recipe *entity.Recipe) error {
 			step.Content = rp.Steps[i].Content
 		}
 	}
-	rp.Steps = steps
-	fmt.Println("recipe")
-	fmt.Println(rp)
-	fmt.Println("recipe")
-	fmt.Println("steps")
-	for _, step := range rp.Steps {
-		fmt.Println(step)
+	// If there are more steps than before, add the new ones
+	if len(steps) < len(rp.Steps) {
+		for i := len(steps); i < len(rp.Steps); i++ {
+			steps = append(steps, &RecipeStep{
+				Content:  rp.Steps[i].Content,
+				Order:    i,
+				RecipeID: rp.ID,
+			})
+		}
 	}
-	fmt.Println("steps")
+	rp.Steps = steps
+
 	// Save Recipe
 	err = r.db.WithContext(ctx).Save(rp).Error
 	if err != nil {
