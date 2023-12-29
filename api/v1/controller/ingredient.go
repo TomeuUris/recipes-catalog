@@ -230,7 +230,7 @@ func (c *IngredientController) DeleteIngredientHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusNoContent, nil)
 }
 
-func SetupIngredientsRouter(controller *IngredientController, router *gin.Engine) *gin.Engine {
+func SetupIngredientsRouter(controller *IngredientController, router *gin.RouterGroup) *gin.RouterGroup {
 	router.GET("/ingredients", controller.GetIngredientByFilterHandler)
 	router.POST("/ingredients", controller.CreateIngredientHandler)
 	router.GET("/ingredients/count", controller.CountIngredientByFilterHandler)

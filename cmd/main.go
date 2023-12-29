@@ -41,8 +41,9 @@ func main() {
 	recipesController := controller.NewRecipeController(recipe.NewGormRepo(db))
 
 	r := gin.Default()
-	r = controller.SetupIngredientsRouter(ingredientsController, r)
-	r = controller.SetupRecipesRouter(recipesController, r)
+	v1 := r.Group("/api/v1")
+	v1 = controller.SetupIngredientsRouter(ingredientsController, v1)
+	v1 = controller.SetupRecipesRouter(recipesController, v1)
 	if os.Getenv("ENV") != "prod" {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}

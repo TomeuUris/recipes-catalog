@@ -239,7 +239,7 @@ func (c *RecipeController) DeleteRecipeHandler(ctx *gin.Context) {
 }
 
 // SetupRecipesRouter sets up the routes for the recipes endpoints
-func SetupRecipesRouter(controller *RecipeController, router *gin.Engine) *gin.Engine {
+func SetupRecipesRouter(controller *RecipeController, router *gin.RouterGroup) *gin.RouterGroup {
 	router.POST("/recipes", controller.CreateRecipeHandler)
 	router.GET("/recipes", controller.GetRecipesByFilterHandler)
 	router.GET("/recipes/count", controller.CountRecipeByFilterHandler)
