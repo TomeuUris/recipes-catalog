@@ -25,7 +25,6 @@ RUN go mod download
 COPY pkg pkg
 COPY cmd cmd
 COPY api api
-COPY internal internal
 
 # Generate Swagger documentation
 RUN swag init --parseDependency --parseInternal -g ./cmd/main.go -o ./docs
