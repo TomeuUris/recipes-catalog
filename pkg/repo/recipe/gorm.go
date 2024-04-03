@@ -14,7 +14,6 @@ type RecipeStep struct {
 	Content  string
 	Order    int  `gorm:"uniqueIndex:idx_recipe_order"`
 	RecipeID uint `gorm:"uniqueIndex:idx_recipe_order"`
-	Recipe   Recipe
 }
 
 type Recipe struct {
@@ -22,7 +21,7 @@ type Recipe struct {
 	Name        string
 	Description string
 	Ingredients []*repo.Ingredient `gorm:"many2many:recipe_ingredients;"`
-	Steps       []*RecipeStep      `gorm:"constraint:OnDelete:CASCADE"`
+	Steps       []*RecipeStep      `gorm:"foreignKey:RecipeID;constraint:OnDelete:CASCADE"`
 }
 
 func (r *Recipe) ToEntity() *entity.Recipe {
@@ -77,7 +76,6 @@ func (r *Recipe) StepsFromEntity(steps []string) {
 			Content:  step,
 			Order:    i + 1,
 			RecipeID: r.ID,
-			Recipe:   *r,
 		}
 	}
 	r.Steps = result
@@ -146,7 +144,7 @@ func (r *RepoGorm) CountByFilter(ctx context.Context, f *FindFilter) (int, error
 func (r *RepoGorm) Add(ctx context.Context, recipe *entity.Recipe) error {
 	rp := &Recipe{}
 	rp.FromEntity(recipe)
-	err := r.db.WithContext(ctx).Create(rp).Error
+	err := r.db.WithContext(ctx).Create(&rp).Error
 	if err != nil {
 		return err
 	}

@@ -174,6 +174,54 @@ func TestRepoGorm_Add(t *testing.T) {
 	tx.Rollback()
 }
 
+func TestRepoGorm_AddDoesNotCreateMoreThanOneRecipe(t *testing.T) {
+	tx := db.Begin()
+
+	// Create a new RepoGorm instance
+	repo := recipe.NewGormRepo(tx)
+
+	recipes, err := repo.FindByFilter(ctx, &recipe.FindFilter{})
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
+		return
+	}
+
+	// Assert the number of recipes is the expected one
+	if len(recipes) != 0 {
+		t.Errorf("unexpected number of recipes, got: %d, want: 0", len(recipes))
+		tx.Rollback()
+		return
+	}
+
+	// Create a sample recipe
+	r := getExampleRecipeEntity()
+
+	// Call the Add method
+	err = repo.Add(ctx, r)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
+		return
+	}
+
+	newRecipes, err := repo.FindByFilter(ctx, &recipe.FindFilter{})
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		tx.Rollback()
+		return
+	}
+
+	// Assert the number of recipes is the expected one
+	if len(newRecipes) != 1 {
+		t.Errorf("unexpected number of recipes, got: %d, want: 1", len(newRecipes))
+		tx.Rollback()
+		return
+	}
+
+	tx.Rollback()
+}
+
 func TestRepoGorm_Edit_RemoveSteps(t *testing.T) {
 	tx := db.Begin()
 
