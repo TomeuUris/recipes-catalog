@@ -164,7 +164,7 @@ func (r *RepoGorm) Edit(ctx context.Context, recipe *entity.Recipe) error {
 	}
 	//If there are less steps than before, delete the last ones (bulk delete). Also drop the ones deleted from the slice
 	if len(steps) > len(rp.Steps) {
-		err := r.db.WithContext(ctx).Delete(&RecipeStep{}, "recipe_id = ? AND `order` >= ?", rp.ID, len(rp.Steps)).Error
+		err := r.db.WithContext(ctx).Delete(&RecipeStep{}, "recipe_id = ? AND `order` >= ?", rp.ID, len(rp.Steps)+1).Error
 		if err != nil {
 			return err
 		}
@@ -181,7 +181,7 @@ func (r *RepoGorm) Edit(ctx context.Context, recipe *entity.Recipe) error {
 		for i := len(steps); i < len(rp.Steps); i++ {
 			steps = append(steps, &RecipeStep{
 				Content:  rp.Steps[i].Content,
-				Order:    i,
+				Order:    i + 1,
 				RecipeID: rp.ID,
 			})
 		}
