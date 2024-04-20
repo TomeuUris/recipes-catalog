@@ -64,11 +64,11 @@ func getExampleRecipeGorm() *recipe.Recipe {
 		Steps: []*recipe.RecipeStep{
 			{
 				Content: "step1",
-				Order:   0,
+				Order:   1,
 			},
 			{
 				Content: "step2",
-				Order:   1,
+				Order:   2,
 			},
 		},
 	}
