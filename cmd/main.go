@@ -5,6 +5,7 @@ import (
 
 	"github.com/TomeuUris/recipes-catalog/api/v1/controller"
 	_ "github.com/TomeuUris/recipes-catalog/docs"
+	"github.com/TomeuUris/recipes-catalog/pkg/repo/cooking_unit"
 	"github.com/TomeuUris/recipes-catalog/pkg/repo/ingredient"
 	"github.com/TomeuUris/recipes-catalog/pkg/repo/recipe"
 	"github.com/gin-gonic/gin"
@@ -39,11 +40,13 @@ func main() {
 
 	ingredientsController := controller.NewIngredientController(ingredient.NewGormRepo(db))
 	recipesController := controller.NewRecipeController(recipe.NewGormRepo(db))
+	cookingUnitController := controller.NewCookingUnitController(cooking_unit.NewGormRepo(db))
 
 	r := gin.Default()
 	v1 := r.Group("/api/v1")
 	v1 = controller.SetupIngredientsRouter(ingredientsController, v1)
 	v1 = controller.SetupRecipesRouter(recipesController, v1)
+	controller.SetupCookingUnitsRouter(cookingUnitController, v1)
 	if os.Getenv("ENV") != "prod" {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
@@ -60,6 +63,9 @@ func RunMigrations(db *gorm.DB) error {
 		return err
 	}
 	if err := recipe.RunMigrations(db); err != nil {
+		return err
+	}
+	if err := cooking_unit.RunMigrations(db); err != nil {
 		return err
 	}
 	return nil
