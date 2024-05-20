@@ -4,11 +4,21 @@ import (
 	"context"
 
 	"github.com/TomeuUris/recipes-catalog/pkg/entity"
-	repo "github.com/TomeuUris/recipes-catalog/pkg/repo/ingredient"
+	repoi "github.com/TomeuUris/recipes-catalog/pkg/repo/ingredient"
+	repocu "github.com/TomeuUris/recipes-catalog/pkg/repo/cooking_unit"	
 	"gorm.io/gorm"
 )
 
 // Database model
+type RecipeIngredient struct {
+	gorm.Model
+	RecipeID     uint `gorm:"primaryKey"`
+	IngredientID uint `gorm:"primaryKey"`
+	Quantity     float64
+	UnitID       uint
+	Unit 	     repocu.CookingUnit
+}
+
 type RecipeStep struct {
 	gorm.Model
 	Content  string
@@ -20,7 +30,7 @@ type Recipe struct {
 	gorm.Model
 	Name        string
 	Description string
-	Ingredients []*repo.Ingredient `gorm:"many2many:recipe_ingredients;"`
+	Ingredients []*repoi.Ingredient `gorm:"many2many:recipe_ingredients;"`
 	Steps       []*RecipeStep      `gorm:"foreignKey:RecipeID;constraint:OnDelete:CASCADE"`
 }
 
@@ -53,9 +63,9 @@ func (r *Recipe) IngredientsToEntity() []*entity.Ingredient {
 }
 
 func (r *Recipe) IngredientsFromEntity(ingredients []*entity.Ingredient) {
-	result := make([]*repo.Ingredient, len(ingredients))
+	result := make([]*repoi.Ingredient, len(ingredients))
 	for i, ingredient := range ingredients {
-		result[i] = &repo.Ingredient{}
+		result[i] = &repoi.Ingredient{}
 		result[i].FromEntity(ingredient)
 	}
 	r.Ingredients = result
